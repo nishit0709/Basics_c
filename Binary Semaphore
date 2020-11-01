@@ -1,0 +1,45 @@
+#include <stdio.h> 
+#include<stdlib.h>
+#include <pthread.h> 
+#include <semaphore.h> 
+#include <unistd.h> 
+#include <sys/syscall.h>
+#define gettid() syscall(SYS_gettid)
+
+struct semaphore{
+    sem_t mutex; 
+};
+typedef struct semaphore* S;
+
+void P(S s)
+{
+    sem_wait(&s->mutex);
+}
+void V(S s)
+{
+    sem_post(&s->mutex);
+}
+void* foo(void* s)
+{
+    P(s);
+    printf("Thread %ld entered the critical section\n",gettid());
+    sleep(5);
+    printf("Thread %ld is leaving the critical section\n",gettid());
+    V(s);
+}
+
+void main()
+{
+    int n,t;
+    printf("Enter the number of threads to be created: ");
+    scanf("%d",&n);
+    S s=(S)malloc(n*sizeof(int));
+    sem_init(&s->mutex,0,1);
+    pthread_t tid[n];
+    for(int i=0;i<n;i++)  {
+        pthread_create(&tid[i],NULL,foo, s);
+        sleep(1);
+    }
+    pthread_exit(NULL);
+    sem_destroy(&s->mutex);
+}
